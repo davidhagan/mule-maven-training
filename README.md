@@ -1,2 +1,14 @@
 # mule-maven-training
-repository for training course, so that their jenkins can reach it.  This is just a personal repository for use during the course, and is unlikely to have anything interesting in it.  (this change was just to ensure successful pushing to github through this arcane network).
+
+This is my Maven project from MuleSoft's advanced development class
+
+## How to run the project
+
+1. Add the remote repository: `git remote add origin https://github.com/{yourGithubUser}/maven-project.git`
+
+1. Enter the repo: `cd maven-project`
+
+1. (Optional) Set your MULE_HOME env variable: `export MULE_HOME={locationOfMuleInstall}`
+
+1. Package and deploy: `mvn install`
+

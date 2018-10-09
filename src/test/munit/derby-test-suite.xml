@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  	xmlns:mock="http://www.mulesoft.org/schema/mule/mock" 
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <munit:config name="munit" doc:name="MUnit configuration" mock-connectors="false" mock-inbounds="false"/>
+    <spring:beans>
+        <spring:import resource="classpath:mule-maven-training.xml"/>
+    </spring:beans>
+    <munit:test name="proveUpdateOnlyOverwritesDataAndNotIds" description="MUnit Test">
+        <flow-ref name="getFlights" doc:name="Get all the flights"/>
+        <munit:assert-true message="the payload was empty" condition="#[payload.size() &gt; 0]" doc:name="Non-empty"/>
+        <dw:transform-message doc:name="extract ids">
+            <dw:set-variable variableName="selectedId"><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0].ID]]></dw:set-variable>
+            <dw:set-variable variableName="flightId"><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0].GUID]]></dw:set-variable>
+        </dw:transform-message>
+        <dw:transform-message doc:name="create update payload">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	"PRICE":77,
+	"DESTINATION":"Z",
+	"ORIGIN":"A"
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="updateFlight" doc:name="Update a flight"/>
+        <set-payload value="#[null]" doc:name="Clear the payload"/>
+        <flow-ref name="getFlight" doc:name="Check that the update applied"/>
+        <munit:assert-on-equals message="id was changed" expectedValue="#[flowVars.selectedId]" actualValue="#[payload.ID]" doc:name="id unchanged"/>
+        <munit:assert-on-equals message="guid was changed" expectedValue="#[flowVars.flightId]" actualValue="#[payload.GUID]" doc:name="guid unchanged"/>
+        <munit:assert-on-equals message="origin wasn't changed to the expected value" expectedValue="#[&quot;A&quot;]" actualValue="#[payload.ORIGIN]" doc:name="new origin"/>
+        <munit:assert-on-equals message="destination wasn't changed to the expected value" expectedValue="#[&quot;Z&quot;]" actualValue="#[payload.DESTINATION]" doc:name="new destination"/>
+        <munit:assert-on-equals message="price wasn't changed to the expected value" expectedValue="#[77]" actualValue="#[payload.PRICE]" doc:name="new price"/>
+    </munit:test>
+    
+</mule>

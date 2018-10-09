@@ -38,30 +38,54 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 ---
 payload]]></dw:set-payload>
         </dw:transform-message>
-        <db:update config-ref="Derby_Configuration" doc:name="Update flight">
-            <db:parameterized-query><![CDATA[update flights set PRICE = :price, ORIGIN = :origin, DESTINATION = :destination where GUID = :guid]]></db:parameterized-query>
-			<db:in-param name="price" value="#[payload.PRICE]"/>
-			<db:in-param name="origin" value="#[payload.ORIGIN]"/>
-			<db:in-param name="destination" value="#[payload.DESTINATION]"/>
-			<db:in-param name="guid" value="#[message.inboundProperties.'http.uri.params'.flight_id]"/>
-        </db:update>
+        <set-variable variableName="flightId" value="#[message.inboundProperties.'http.uri.params'.flight_id]" doc:name="Variable"/>
+        <flow-ref name="updateFlight" doc:name="Flow Reference"/>
         <dw:transform-message doc:name="To JSON">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="updateFlight">
+        <db:update config-ref="Derby_Configuration" doc:name="Update flight">
+            <db:parameterized-query><![CDATA[update flights set PRICE = :price, ORIGIN = :origin, DESTINATION = :destination where GUID = :guid]]></db:parameterized-query>
+            <db:in-param name="price" value="#[payload.PRICE]"/>
+            <db:in-param name="origin" value="#[payload.ORIGIN]"/>
+            <db:in-param name="destination" value="#[payload.DESTINATION]"/>
+            <db:in-param name="guid" value="#[flowVars.flightId]"/>
+        </db:update>
+        <dw:transform-message doc:name="To Java">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
 ---
 payload]]></dw:set-payload>
         </dw:transform-message>
     </flow>
     <flow name="delete:/v1/flights/{flight_id}:Router">
+        <set-variable variableName="flightId" value="#[message.inboundProperties.'http.uri.params'.flight_id]" doc:name="Variable"/>
+        <flow-ref name="deleteFlight" doc:name="Flow Reference"/>
+        <dw:transform-message doc:name="To Json">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="deleteFlight">
         <db:delete config-ref="Derby_Configuration" doc:name="Delete flight">
             <db:parameterized-query><![CDATA[delete from flights where guid = :guid]]></db:parameterized-query>
-			<db:in-param name="guid" value="#[message.inboundProperties.'http.uri.params'.flight_id]"/>
+			<db:in-param name="guid" value="#[flowVars.flightId]"/>
         </db:delete>
+        <dw:transform-message doc:name="To Java">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
     </flow>
     <flow name="get:/v1/flights:Router">
-        <db:select config-ref="Derby_Configuration" doc:name="Get flights">
-            <db:parameterized-query><![CDATA[select * from flights]]></db:parameterized-query>
-        </db:select>
+        <flow-ref name="getFlights" doc:name="getFlights"/>
         <dw:transform-message doc:name="To JSON">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
@@ -69,16 +93,37 @@ payload]]></dw:set-payload>
 payload]]></dw:set-payload>
         </dw:transform-message>
     </flow>
-    <flow name="get:/v1/flights/{flight_id}:Router">
-        <db:select config-ref="Derby_Configuration" doc:name="Get flight">
-            <db:parameterized-query><![CDATA[select * from flights where guid = :guid]]></db:parameterized-query>
-            <db:in-param name="guid" value="#[message.inboundProperties.'http.uri.params'.flight_id]"/>
+    <flow name="getFlights">
+        <db:select config-ref="Derby_Configuration" doc:name="Get flights">
+            <db:parameterized-query><![CDATA[select * from flights]]></db:parameterized-query>
         </db:select>
-        <dw:transform-message doc:name="To JSON">
+        <dw:transform-message doc:name="To Java">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/v1/flights/{flight_id}:Router">
+        <set-variable variableName="flightId" value="#[message.inboundProperties.'http.uri.params'.flight_id]" doc:name="Variable"/>
+        <flow-ref name="getFlight" doc:name="Flow Reference"/>
+        <dw:transform-message doc:name="To Java">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
 payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="getFlight">
+        <db:select config-ref="Derby_Configuration" doc:name="Get flight">
+            <db:parameterized-query><![CDATA[select * from flights where guid = :guid]]></db:parameterized-query>
+            <db:in-param name="guid" value="#[flowVars.flightId]"/>
+        </db:select>
+        <dw:transform-message doc:name="To Java">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0]]]></dw:set-payload>
         </dw:transform-message>
     </flow>
     <flow name="post:/v1/flights:application/json:Router">
@@ -88,6 +133,19 @@ payload]]></dw:set-payload>
 ---
 payload]]></dw:set-payload>
         </dw:transform-message>
+        <flow-ref name="insertFlight" doc:name="insertFlight"/>
+
+        <dw:transform-message doc:name="To JSON">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	response:payload,
+	guid: flowVars.guid
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="insertFlight">
         <expression-component doc:name="Expression"><![CDATA[flowVars.guid = java.util.UUID.randomUUID().toString();
 payload.GUID = flowVars.guid;]]></expression-component>
         <db:insert config-ref="Derby_Configuration" doc:name="Insert flight">
@@ -97,9 +155,9 @@ payload.GUID = flowVars.guid;]]></expression-component>
 			<db:in-param name="destination" value="#[payload.DESTINATION]"/>
 			<db:in-param name="guid" value="#[payload.GUID]"/>
 		</db:insert>
-        <dw:transform-message doc:name="To JSON">
+        <dw:transform-message doc:name="To Java">
             <dw:set-payload><![CDATA[%dw 1.0
-%output application/json
+%output application/java
 ---
 {
 	response:payload,

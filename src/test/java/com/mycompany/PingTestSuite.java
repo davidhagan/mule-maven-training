@@ -13,7 +13,7 @@ public class PingTestSuite extends FunctionalTestCase {
 	@Test
 	public void failingTestThatPingReturnsPang() throws Exception {
 		MuleEvent event = runFlow("ping");
-		Assert.assertEquals("pang", event.getMessageAsString());
+		Assert.assertEquals("pong", event.getMessageAsString());
 	}
 	@Override
 	protected String getConfigFile(){

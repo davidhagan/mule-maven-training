@@ -1,0 +1,54 @@
+#%RAML 1.0
+title: Flights
+
+baseUri: http://localhost:8081/flights
+mediaType: [application/json]
+
+types:
+  Flight:
+    type: object
+    properties:
+      PRICE: number
+      DESTINATION: string
+      ORIGIN: string
+      GUID: 
+        type: string?
+        required: false
+      ID:
+        type: string?
+        required: false
+        
+/v1:
+  /flights:
+    get:
+      responses:
+        200:
+          body: Flight[]
+    post:
+      body:
+        application/json:
+          type: Flight
+      responses:
+        204:
+          body:
+            type: number
+    /{flight_id}:
+      get:
+        responses:
+          200:
+            body:
+              type: Flight
+          404:
+      put:
+        body:
+          application/json:
+            type: Flight
+        responses:
+          200:
+            body:
+              type: Flight
+          404:
+      delete:
+        responses:
+          209:
+          404:
